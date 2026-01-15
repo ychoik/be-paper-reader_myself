@@ -39,6 +39,8 @@
   close #이슈번호
   resolves #이슈번호
 
+---
+
 ## 🧾 커밋 컨벤션
 
 이 프로젝트는 **의미 단위 커밋**을 지향합니다.
@@ -98,3 +100,84 @@ docs/update-readme
 ```
 
 ⚠️ `main` 브랜치에 직접 push 하지 않습니다.
+
+---
+
+## 🖥️ 로컬 실행 방법 (Backend)
+
+이 프로젝트는 **Docker 기반 실행**을 기본으로 합니다.
+
+### 1️⃣ 필수 요구사항
+
+- Docker
+- Docker Compose
+
+---
+
+### 2️⃣ 환경 변수 설정
+
+```bash
+cp .env.example .env
+```
+
+필요한 값은 `.env` 파일에 직접 입력합니다.
+
+⚠️ `.env` 파일은 Git에 커밋하지 않습니다.
+
+---
+
+### 3️⃣ 로컬 실행
+
+```bash
+docker compose -f compose/docker-compose.local.yml up -d
+```
+
+실행 후 컨테이너 상태 확인:
+
+```bash
+docker ps
+
+```
+
+---
+
+### 4️⃣ 서비스 접근
+
+```
+http://localhost:8080
+```
+
+(포트는 `docker-compose.local.yml` 기준)
+
+---
+
+### 5️⃣ 종료
+
+```bash
+docker compose -f compose/docker-compose.local.yml down
+```
+
+---
+
+## 📁 Backend 코드 위치 안내
+
+Spring Boot 백엔드 코드는 아래 경로에 생성합니다.
+
+```
+app/
+ └─(SpringBootProjectRoot)
+```
+
+- `app/` 디렉토리 내부에 Spring Boot 프로젝트 생성
+- Docker 및 CI/CD는 이미 구성되어 있으므로
+    
+    **프로젝트 코드만 추가하면 됩니다**
+    
+
+---
+
+## 🚀 배포 주의사항
+
+- `main` 브랜치에 merge 시 자동 배포됩니다.
+- 테스트가 완료된 코드만 PR → merge 해주세요.
+- 배포 환경 설정은 `compose/docker-compose.yml` 기준입니다.
