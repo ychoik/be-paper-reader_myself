@@ -2,6 +2,15 @@
 
 이 디렉토리는 **백엔드(Spring Boot) 애플리케이션 코드**가 위치하는 공간입니다.
 
+## Local Development Guide
+
+1. 이 레포를 클론한 뒤 feature 브랜치를 생성합니다.
+2. Spring Boot 프로젝트는 `app/` 디렉토리 안에서 생성합니다.
+3. 로컬 실행은 아래 명령어를 사용합니다.
+
+```bash
+docker compose -f compose/docker-compose.local.yml up
+
 ## How to start
 
 - 이 디렉토리(`app/`) 안에서 Spring Boot 프로젝트를 생성해주세요.
