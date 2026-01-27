@@ -1,4 +1,8 @@
 package swyp.paperdot.domain.user;
 
-public interface userRepository {
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.Optional;
+
+public interface userRepository extends JpaRepository<userEntity, Long> {
 }

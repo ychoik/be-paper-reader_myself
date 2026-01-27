@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5434/paper_local
+    url: jdbc:postgresql://211.188.63.84:5434/paper_local
     username: paper
     password: paper1234
     driver-class-name: org.postgresql.Driver
