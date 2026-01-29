@@ -2,6 +2,7 @@ package swyp.paperdot.document.storage;
 
 import java.io.IOException;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;
 
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -10,15 +11,11 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import swyp.paperdot.document.enums.StorageProvider;
 
+@RequiredArgsConstructor
 public class NcpObjectStorageClient implements ObjectStorageClient {
 
     private final S3Client s3Client;
     private final NcpStorageProperties properties;
-
-    public NcpObjectStorageClient(S3Client s3Client, NcpStorageProperties properties) {
-        this.s3Client = s3Client;
-        this.properties = properties;
-    }
 
     @Override
     public void upload(String key, MultipartFile file, String contentType) throws IOException {
