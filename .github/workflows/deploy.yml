@@ -32,6 +32,11 @@ jobs:
             echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
             echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
             echo "BACKEND_PORT=${{ secrets.BACKEND_PORT }}" >> .env
+            echo "NCP_REGION=${{ secrets.NCP_REGION }}" >> .env
+            echo "NCP_ENDPOINT=${{ secrets.NCP_ENDPOINT }}" >> .env
+            echo "NCP_ACCESS_KEY=${{ secrets.NCP_ACCESS_KEY }}" >> .env
+            echo "NCP_SECRET_KEY=${{ secrets.NCP_SECRET_KEY }}" >> .env
+            echo "NCP_BUCKET=${{ secrets.NCP_BUCKET }}" >> .env
           
             docker compose up -d
           EOF
