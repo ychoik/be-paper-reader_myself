@@ -37,6 +37,12 @@ jobs:
             echo "NCP_ACCESS_KEY=${{ secrets.NCP_ACCESS_KEY }}" >> .env
             echo "NCP_SECRET_KEY=${{ secrets.NCP_SECRET_KEY }}" >> .env
             echo "NCP_BUCKET=${{ secrets.NCP_BUCKET }}" >> .env
-          
+            echo "KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}" >> .env
+            echo "KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}" >> .env
+            echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
+            echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
+            echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+            echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+            
             docker compose up -d
           EOF
