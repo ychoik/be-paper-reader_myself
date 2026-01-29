@@ -13,14 +13,14 @@ import java.time.OffsetDateTime;
         @Index(name = "idx_refresh_user", columnList = "user_id"),
         @Index(name = "idx_refresh_token_hash", columnList = "token_hash", unique = true)
 })
-public class refreshTokenEntity {
+public class RefreshTokenEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id")
-    private userEntity user;
+    private UserEntity user;
 
     @Column(name = "token_hash", nullable = false, length = 64, unique = true)
     private String tokenHash;

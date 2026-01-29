@@ -1,5 +1,5 @@
 package swyp.paperdot.domain.user;
 
-public enum socialProvider {
+public enum SocialProvider {
         KAKAO, GOOGLE
 }

@@ -11,10 +11,10 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/auth")
-public class authController {
+public class AuthController {
 
-    private final jwtService jwtService;
-    private final refreshTokenService refreshTokenService;
+    private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
     @Value("${paperdot.jwt.refresh-cookie-name}")
     private String refreshCookieName;
@@ -28,7 +28,7 @@ public class authController {
         }
 
         // DB에 저장된 refresh인지 + 만료/폐기 체크
-        refreshTokenEntity valid = refreshTokenService.getValid(refreshToken);
+        RefreshTokenEntity valid = refreshTokenService.getValid(refreshToken);
 
         Long userId = valid.getUser().getId();
         String access = jwtService.createAccessToken(userId);
@@ -48,10 +48,10 @@ public class authController {
         // 쿠키 삭제
         ResponseCookie deleteCookie = ResponseCookie.from(refreshCookieName, "")
                 .httpOnly(true)
-                .secure(false) // 운영 https면 true
+                .secure(true) // 운영 https면 true 아니면 false
+                .sameSite("None") //배포시
                 .path("/")
                 .maxAge(0)
-                // sameSite는 ResponseCookie에서 지원(스프링 버전에 따라 다름)
                 .build();
 
         response.addHeader("Set-Cookie", deleteCookie.toString());

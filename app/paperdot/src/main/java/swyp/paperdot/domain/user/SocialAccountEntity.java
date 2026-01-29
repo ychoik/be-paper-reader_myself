@@ -15,18 +15,18 @@ import java.time.OffsetDateTime;
                 @UniqueConstraint(name = "uk_provider_provider_user", columnNames = {"provider", "provider_user_id"})
         }
 )
-public class socialAccountEntity {
+public class SocialAccountEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id")
-    private userEntity user;
+    private UserEntity user;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private socialProvider provider;
+    private SocialProvider provider;
 
     @Column(name = "provider_user_id", nullable = false, length = 255)
     private String providerUserId;

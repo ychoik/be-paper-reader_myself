@@ -10,9 +10,9 @@ import java.time.OffsetDateTime;
 
 @Service
 @RequiredArgsConstructor
-public class refreshTokenService {
+public class RefreshTokenService {
 
-    private final refreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     public String sha256(String raw) {
         try {
@@ -27,8 +27,8 @@ public class refreshTokenService {
     }
 
     @Transactional
-    public void store(userEntity user, String refreshToken, OffsetDateTime expiresAt) {
-        refreshTokenEntity entity = refreshTokenEntity.builder()
+    public void store(UserEntity user, String refreshToken, OffsetDateTime expiresAt) {
+        RefreshTokenEntity entity = RefreshTokenEntity.builder()
                 .user(user)
                 .tokenHash(sha256(refreshToken))
                 .expiresAt(expiresAt)
@@ -38,9 +38,9 @@ public class refreshTokenService {
     }
 
     @Transactional(readOnly = true)
-    public refreshTokenEntity getValid(String refreshToken) {
+    public RefreshTokenEntity getValid(String refreshToken) {
         String hash = sha256(refreshToken);
-        refreshTokenEntity entity = refreshTokenRepository.findByTokenHash(hash)
+        RefreshTokenEntity entity = refreshTokenRepository.findByTokenHash(hash)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid refresh token"));
 
         if (entity.isRevoked()) throw new IllegalArgumentException("Refresh token revoked");

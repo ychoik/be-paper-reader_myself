@@ -13,13 +13,13 @@ import java.util.Date;
 import java.util.UUID;
 
 @Service
-public class jwtService {
+public class JwtService {
 
     private final SecretKey key;
     private final long accessTtlSeconds;
     private final long refreshTtlSeconds;
 
-    public jwtService(
+    public JwtService(
             @Value("${paperdot.jwt.secret}") String secret,
             @Value("${paperdot.jwt.access-ttl-seconds}") long accessTtlSeconds,
             @Value("${paperdot.jwt.refresh-ttl-seconds}") long refreshTtlSeconds
@@ -42,13 +42,6 @@ public class jwtService {
 
     public String createRefreshToken(Long userId) {
         Instant now = Instant.now();
-//        return Jwts.builder()
-//                .subject(String.valueOf(userId))
-//                .claim("typ", "refresh")
-//                .issuedAt(Date.from(now))
-//                .expiration(Date.from(now.plusSeconds(refreshTtlSeconds)))
-//                .signWith(key)
-//                .compact();
 
         return Jwts.builder()
                 .subject(String.valueOf(userId))

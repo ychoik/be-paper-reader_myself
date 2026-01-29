@@ -18,14 +18,14 @@ import java.util.List;
 
 @Configuration
 @RequiredArgsConstructor
-public class securityConfig {
+public class SecurityConfig {
 
-    private final customOAuth2UserService customOAuth2UserService;
-    //private final kakaoOauth2UserService kakaoOauth2UserService;
-    private final jwtService jwtService;
-    private final jwtAuthFilter jwtAuthFilter;
-    private final refreshTokenService refreshTokenService;
-    private final userRepository userRepository;
+    private final CustomOAuth2UserService customOAuth2UserService;
+
+    private final JwtService jwtService;
+    private final JwtAuthFilter jwtAuthFilter;
+    private final RefreshTokenService refreshTokenService;
+    private final UserRepository userRepository;
 
     @Value("${paperdot.frontend.base-url}")
     private String frontendBaseUrl;
@@ -41,7 +41,6 @@ public class securityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/oauth2/**",
-//                                "/login/**",
                                 "/login/oauth2/**",
                                 "/auth/token", "/auth/logout"
                         ).permitAll()
@@ -49,12 +48,12 @@ public class securityConfig {
                 )
                 .oauth2Login(oauth -> oauth
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
-                        // ✅ 여기: 로그인 성공 후 처리 (refresh 쿠키 + redirect)
+                        // 여기: 로그인 성공 후 처리 (refresh 쿠키 + redirect)
                         .successHandler((request, response, authentication) -> {
                             var oAuth2User = (org.springframework.security.oauth2.core.user.OAuth2User) authentication.getPrincipal();
                             Long userId = Long.valueOf(oAuth2User.getAttribute("userId").toString());
 
-                            userEntity user = userRepository.findById(userId)
+                            UserEntity user = userRepository.findById(userId)
                                     .orElseThrow(() -> new IllegalStateException("User not found"));
 
                             String refreshToken = jwtService.createRefreshToken(userId);
@@ -65,9 +64,8 @@ public class securityConfig {
                             // HttpOnly 쿠키로 refresh 심기
                             ResponseCookie cookie = ResponseCookie.from(refreshCookieName, refreshToken)
                                     .httpOnly(true)
-//                                    .secure(false) // 로컬 운영 https면 true
-                                    .secure(true) //배포시
-                                    .sameSite("None") //배포시
+                                    .secure(true) //배포시 _ https이면 true http이면 false
+                                    .sameSite("None") //배포시 추가
                                     .path("/")
                                     .maxAge(60L * 60 * 24 * 14)
                                     // 로컬 개발에서 프론트(3000)로 쿠키 보내려면 SameSite 설정이 중요할 수 있음

@@ -10,7 +10,7 @@ import java.time.OffsetDateTime;
 @Builder
 @Entity
 @Table(name = "users")
-public class userEntity {
+public class UserEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
