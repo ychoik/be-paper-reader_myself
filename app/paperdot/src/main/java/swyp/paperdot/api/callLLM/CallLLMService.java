@@ -79,6 +79,12 @@ public class CallLLMService {
      * @throws IOException PDF 파일 처리 중 오류가 발생할 경우.
      */
     public String getChatResponseFromPdf(MultipartFile file) throws IOException {
+        // 파일 크기 제한 (30MB)
+        long maxSize = 30 * 1024 * 1024;
+        if (file.getSize() > maxSize) {
+            throw new IllegalArgumentException("파일 크기는 30MB를 초과할 수 없습니다.");
+        }
+
         // try-with-resources를 사용하여 PDDocument가 자동으로 닫히도록 합니다.
         try (PDDocument document = Loader.loadPDF(file.getBytes())) {
             PDFTextStripper pdfStripper = new PDFTextStripper();
