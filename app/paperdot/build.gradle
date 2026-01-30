@@ -46,6 +46,7 @@ dependencies {
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
+    implementation 'org.apache.pdfbox:pdfbox-tools:3.0.2' // PDFBox Loader 클래스 사용을 위한 tools 라이브러리 추가
 }
 
 tasks.named('test') {
