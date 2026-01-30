@@ -13,7 +13,7 @@ import org.springframework.web.client.RestTemplate;
 public class RestTemplateConfig {
 
     // application.yml에서 OpenAI API 키를 주입합니다.
-    @Value("${openai.api.key}")
+    @Value("${openai.api.key:}")
     private String openaiApiKey;
 
     /**

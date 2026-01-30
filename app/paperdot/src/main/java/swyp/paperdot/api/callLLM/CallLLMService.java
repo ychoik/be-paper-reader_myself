@@ -25,15 +25,15 @@ public class CallLLMService {
     private final RestTemplate restTemplate; // HTTP 요청을 만들기 위해 주입된 RestTemplate
 
     // application.yml에서 LLM 모델 이름을 주입합니다.
-    @Value("${openai.api.model}")
+    @Value("${openai.api.model:}")
     private String model;
 
     // application.yml에서 OpenAI API URL을 주입합니다.
-    @Value("${openai.api.url}")
+    @Value("${openai.api.url:}")
     private String apiUrl;
 
     // application.yml에서 시스템 메시지를 주입합니다.
-    @Value("${openai.api.system-message}")
+    @Value("${openai.api.system-message:}")
     private String systemMessage;
 
     /**
@@ -61,8 +61,14 @@ public class CallLLMService {
         ChatRequest request = new ChatRequest(model, messages);
         // OpenAI API에 POST 요청을 보내고 응답을 받습니다.
         ChatResponse response = restTemplate.postForObject(apiUrl, request, ChatResponse.class);
+
+        // LLM 응답이 유효한지 확인합니다.
+        if (response == null || response.getChoices() == null || response.getChoices().isEmpty()) {
+            // 운영 환경에서는 로깅을 추가하거나 더 구체적인 예외 처리를 고려해야 합니다.
+            throw new IllegalStateException("LLM으로부터 유효한 응답을 받지 못했습니다.");
+        }
+
         // 첫 번째 선택지 메시지의 내용을 추출하여 반환합니다.
-        // 운영 환경에서는 null 또는 빈 응답에 대한 오류 처리를 추가해야 합니다.
         return response.getChoices().get(0).getMessage().getContent();
     }
 
