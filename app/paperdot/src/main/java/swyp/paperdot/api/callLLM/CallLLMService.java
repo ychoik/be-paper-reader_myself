@@ -20,7 +20,7 @@ import java.util.List;
  * RestTemplate을 사용하여 채팅 요청을 보내고 응답을 받습니다.
  */
 @Service
-public class callLLMService {
+public class CallLLMService {
 
     private final RestTemplate restTemplate; // HTTP 요청을 만들기 위해 주입된 RestTemplate
 
@@ -41,7 +41,7 @@ public class callLLMService {
      * @param restTemplate API 키 인터셉터로 구성된 RestTemplate 인스턴스.
      */
     @Autowired
-    public callLLMService(RestTemplate restTemplate) {
+    public CallLLMService(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
 

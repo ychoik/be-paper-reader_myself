@@ -17,16 +17,16 @@ import java.io.IOException;
  */
 @RestController
 @RequestMapping("/api/llm") // 모든 LLM 관련 API 엔드포인트의 기본 경로
-public class callLLMController {
+public class CallLLMController {
 
-    private final callLLMService callLLMService; // 주입된 LLM 서비스
+    private final CallLLMService callLLMService; // 주입된 LLM 서비스
 
     /**
      * CallLLMController의 생성자로, CallLLMService를 주입합니다.
      * @param callLLMService LLM API 호출을 담당하는 서비스.
      */
     @Autowired
-    public callLLMController(callLLMService callLLMService) {
+    public CallLLMController(CallLLMService callLLMService) {
         this.callLLMService = callLLMService;
     }
 
