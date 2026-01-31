@@ -21,6 +21,8 @@ import java.util.List;
 public class SecurityConfig {
 
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final CustomOidcUserService customOidcUserService;
+
 
     private final JwtService jwtService;
     private final JwtAuthFilter jwtAuthFilter;
@@ -50,7 +52,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth -> oauth
-                        .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
+                        .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService).oidcUserService(customOidcUserService))
                         // 여기: 로그인 성공 후 처리 (refresh 쿠키 + redirect)
                         .successHandler((request, response, authentication) -> {
                             var oAuth2User = (org.springframework.security.oauth2.core.user.OAuth2User) authentication.getPrincipal();
