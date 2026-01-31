@@ -43,9 +43,7 @@ public class AuthController {
         return Map.of("accessToken", access);
     }
 
-    /**
-     * 로그아웃 (공통)
-     */
+    //로그아웃 (공통)
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletRequest request) {
         Long userId = resolveUserId(request);
@@ -58,9 +56,7 @@ public class AuthController {
                 .build();
     }
 
-    /**
-     * 카카오 회원탈퇴
-     */
+    // 카카오 회원탈퇴
     @DeleteMapping("/withdraw/kakao")
     public ResponseEntity<Void> withdrawKakao(HttpServletRequest request) {
         Long userId = resolveUserId(request);
@@ -73,9 +69,7 @@ public class AuthController {
                 .build();
     }
 
-    /**
-     * 구글 회원탈퇴
-     */
+    // 구글 회원탈퇴
     @DeleteMapping("/withdraw/google")
     public ResponseEntity<Void> withdrawGoogle(HttpServletRequest request) {
         Long userId = resolveUserId(request);
@@ -88,9 +82,7 @@ public class AuthController {
                 .build();
     }
 
-    /**
-     * access(SecurityContext) -> refresh cookie 순으로 userId 획득
-     */
+    // access(SecurityContext) -> refresh cookie 순으로 userId 획득
     private Long resolveUserId(HttpServletRequest request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof JwtAuthFilter.PaperdotPrincipal p) {
