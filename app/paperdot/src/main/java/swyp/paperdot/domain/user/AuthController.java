@@ -131,7 +131,7 @@ public class AuthController {
 
     private ResponseCookie deleteRefreshCookie() {
         return ResponseCookie.from(refreshCookieName, "")
-                .httpOnly(false)
+                .httpOnly(true)
                 .secure(true) // 로컬 http면 false, 운영 https면 true
                 .sameSite("None") //운영일때만
                 .path("/")

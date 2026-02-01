@@ -137,7 +137,7 @@ public class SecurityConfig {
 
                             // HttpOnly 쿠키로 refresh 심기
                             ResponseCookie cookie = ResponseCookie.from(refreshCookieName, refreshToken)
-                                    .httpOnly(false)
+                                    .httpOnly(true)
                                     .secure(true) //배포시 _ https이면 true http이면 false
                                     .sameSite("None") //배포시 추가
                                     .path("/")
