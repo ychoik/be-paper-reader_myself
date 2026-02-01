@@ -14,9 +14,13 @@ import swyp.paperdot.common.JwtAuthFilter;
 
 import java.util.Map;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/auth")
+@Tag(name = "Auth", description = "인증 및 세션 관리 API")
 public class AuthController {
 
     private final JwtService jwtService;
@@ -28,6 +32,10 @@ public class AuthController {
 
     // refresh 쿠키로 access 토큰 발급 (기존 그대로)
     @PostMapping("/token")
+    @Operation(
+            summary = "액세스 토큰 발급",
+            description = "리프레시 쿠키를 이용해 새 액세스 토큰을 발급합니다."
+    )
     public Map<String, Object> token(
             @CookieValue(name = "${paperdot.jwt.refresh-cookie-name}", required = false) String refreshToken
     ) {
@@ -45,6 +53,10 @@ public class AuthController {
 
     //로그아웃 (공통)
     @PostMapping("/logout")
+    @Operation(
+            summary = "로그아웃",
+            description = "리프레시 토큰을 폐기하고 쿠키를 삭제합니다."
+    )
     public ResponseEntity<Void> logout(HttpServletRequest request) {
         Long userId = resolveUserId(request);
 
@@ -58,6 +70,10 @@ public class AuthController {
 
     // 카카오 회원탈퇴
     @DeleteMapping("/withdraw/kakao")
+    @Operation(
+            summary = "카카오 회원 탈퇴",
+            description = "카카오 계정 연동을 해지하고 쿠키를 삭제합니다."
+    )
     public ResponseEntity<Void> withdrawKakao(HttpServletRequest request) {
         Long userId = resolveUserId(request);
 
@@ -71,6 +87,10 @@ public class AuthController {
 
     // 구글 회원탈퇴
     @DeleteMapping("/withdraw/google")
+    @Operation(
+            summary = "구글 회원 탈퇴",
+            description = "구글 계정 연동을 해지하고 쿠키를 삭제합니다."
+    )
     public ResponseEntity<Void> withdrawGoogle(HttpServletRequest request) {
         Long userId = resolveUserId(request);
 
