@@ -42,7 +42,11 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/oauth2/**",
                                 "/login/oauth2/**",
-                                "/auth/token", "/auth/logout"
+                                "/auth/token",
+                                "/auth/logout",
+                                "/documents",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
