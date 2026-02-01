@@ -37,7 +37,9 @@ public class AuthController {
             description = "리프레시 쿠키를 이용해 새 액세스 토큰을 발급합니다."
     )
     public Map<String, Object> token(
-            @CookieValue(name = "${paperdot.jwt.refresh-cookie-name}", required = false) String refreshToken
+//            @CookieValue(name = "${paperdot.jwt.refresh-cookie-name}", required = false) String refreshToken
+            @CookieValue(name = "paperdot_refresh", required = false) String refreshToken
+
     ) {
         if (refreshToken == null || refreshToken.isBlank()) {
             throw new IllegalArgumentException("No refresh cookie");
@@ -130,8 +132,8 @@ public class AuthController {
     private ResponseCookie deleteRefreshCookie() {
         return ResponseCookie.from(refreshCookieName, "")
                 .httpOnly(true)
-                .secure(true) // 로컬 http면 false, 운영 https면 true
-                .sameSite("None") //운영일때만
+                .secure(false) // 로컬 http면 false, 운영 https면 true
+//                .sameSite("None") //운영일때만
                 .path("/")
                 .maxAge(0)
                 .build();
