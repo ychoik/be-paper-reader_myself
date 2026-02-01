@@ -37,7 +37,9 @@ public class AuthController {
             description = "리프레시 쿠키를 이용해 새 액세스 토큰을 발급합니다."
     )
     public Map<String, Object> token(
-            @CookieValue(name = "${paperdot.jwt.refresh-cookie-name}", required = false) String refreshToken
+//            @CookieValue(name = "${paperdot.jwt.refresh-cookie-name}", required = false) String refreshToken
+            @CookieValue(name = "paperdot_refresh", required = false) String refreshToken
+
     ) {
         if (refreshToken == null || refreshToken.isBlank()) {
             throw new IllegalArgumentException("No refresh cookie");
