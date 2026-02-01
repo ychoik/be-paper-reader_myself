@@ -62,4 +62,8 @@ public class docUnitsEntity {
         this.sourceText = sourceText;
         this.status = status;
     }
+
+    public void updateStatus(UnitStatus status) {
+        this.status = status;
+    }
 }

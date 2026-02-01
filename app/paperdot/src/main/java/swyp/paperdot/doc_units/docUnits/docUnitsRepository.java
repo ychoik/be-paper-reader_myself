@@ -35,4 +35,13 @@ public interface docUnitsRepository extends JpaRepository<docUnitsEntity, Long> 
      * @return 조회된 DocUnit 리스트
      */
     List<docUnitsEntity> findByDocumentIdOrderByOrderInDocAsc(Long documentId);
+
+    /**
+     * 특정 documentId와 status에 해당하는 모든 DocUnit을 orderInDoc 순서에 따라 오름차순으로 조회합니다.
+     *
+     * @param documentId 문서 ID
+     * @param status 조회할 DocUnit의 상태
+     * @return 조회된 DocUnit 리스트
+     */
+    List<docUnitsEntity> findByDocumentIdAndStatusOrderByOrderInDocAsc(Long documentId, swyp.paperdot.doc_units.enums.UnitStatus status);
 }
