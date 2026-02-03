@@ -6,6 +6,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
+import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
+import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -23,11 +31,15 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final CustomOidcUserService customOidcUserService;
 
-
     private final JwtService jwtService;
     private final JwtAuthFilter jwtAuthFilter;
     private final RefreshTokenService refreshTokenService;
     private final UserRepository userRepository;
+
+    private final OAuth2AuthorizedClientService authorizedClientService;
+    private final ClientRegistrationRepository clientRegistrationRepository;
+    private final SocialAccountRepository socialAccountRepository;
+    private final OAuth2AuthorizedClientRepository authorizedClientRepository;
 
     @Value("${paperdot.frontend.base-url}")
     private String frontendBaseUrl;
@@ -36,7 +48,32 @@ public class SecurityConfig {
     private String refreshCookieName;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public OAuth2AuthorizationRequestResolver authorizationRequestResolver(
+            ClientRegistrationRepository clientRegistrationRepository
+    ) {
+        DefaultOAuth2AuthorizationRequestResolver resolver =
+                new DefaultOAuth2AuthorizationRequestResolver(
+                        clientRegistrationRepository,
+                        "/oauth2/authorization"
+                );
+
+        resolver.setAuthorizationRequestCustomizer((OAuth2AuthorizationRequest.Builder builder) -> {
+            OAuth2AuthorizationRequest req = builder.build();
+            String registrationId = (String) req.getAttributes().get(OAuth2ParameterNames.REGISTRATION_ID);
+
+            if ("google".equals(registrationId)) {
+                builder.additionalParameters(params -> {
+                    params.put("access_type", "offline");
+                    params.put("prompt", "consent");
+                });
+            }
+        });
+
+        return resolver;
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http,OAuth2AuthorizationRequestResolver authorizationRequestResolver) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(c -> {})
@@ -46,12 +83,14 @@ public class SecurityConfig {
                                 "/login/oauth2/**",
                                 "/auth/token",
                                 "/auth/logout",
+                                "/documents",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth -> oauth
+                        .authorizationEndpoint(a -> a.authorizationRequestResolver(authorizationRequestResolver))
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService).oidcUserService(customOidcUserService))
                         // 여기: 로그인 성공 후 처리 (refresh 쿠키 + redirect)
                         .successHandler((request, response, authentication) -> {
@@ -60,7 +99,37 @@ public class SecurityConfig {
 
                             UserEntity user = userRepository.findById(userId)
                                     .orElseThrow(() -> new IllegalStateException("User not found"));
+                            if (authentication instanceof org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken oat) {
+                                String registrationId = oat.getAuthorizedClientRegistrationId();
 
+                                if ("google".equals(registrationId)) {
+                                    OAuth2AuthorizedClient client =
+                                            authorizedClientService.loadAuthorizedClient(registrationId, oat.getName());
+
+                                    if (client != null) {
+                                        String refresh = (client.getRefreshToken() != null)
+                                                ? client.getRefreshToken().getTokenValue()
+                                                : null;
+
+                                        String access = (client.getAccessToken() != null)
+                                                ? client.getAccessToken().getTokenValue()
+                                                : null;
+
+                                        socialAccountRepository.findByUser_IdAndProvider(userId, SocialProvider.GOOGLE)
+                                                .ifPresent(sa -> {
+                                                    // refresh 있으면 저장 (완성형 핵심)
+                                                    if (refresh != null && !refresh.isBlank()) {
+                                                        sa.setProviderRefreshToken(refresh);
+                                                    }
+                                                    // fallback로 access도 저장(선택)
+                                                    if (access != null && !access.isBlank()) {
+                                                        sa.setProviderAccessToken(access);
+                                                    }
+                                                    socialAccountRepository.save(sa);
+                                                });
+                                    }
+                                }
+                            }
                             String refreshToken = jwtService.createRefreshToken(userId);
                             OffsetDateTime expiresAt = OffsetDateTime.ofInstant(jwtService.getExpiresAt(refreshToken), java.time.ZoneOffset.UTC);
 
