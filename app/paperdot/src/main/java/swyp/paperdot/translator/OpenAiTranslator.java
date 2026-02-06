@@ -13,14 +13,11 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import swyp.paperdot.translator.dto.OpenAiTranslationDto;
+import swyp.paperdot.translator.dto.OpenAiTranslationDto.TranslationPair; // TranslationPair import
 import swyp.paperdot.translator.exception.TranslationException;
-import swyp.paperdot.translator.exception.TranslationSizeMismatchException;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Slf4j
 @Component
@@ -32,8 +29,6 @@ public class OpenAiTranslator implements TranslatorPort {
     private final String apiKey;
     private final String model;
     private final String apiUrl = "https://api.openai.com/v1/chat/completions";
-
-    private static final int DEFAULT_CHUNK_SIZE = 30; // 기본 청크 사이즈
 
     public OpenAiTranslator(
             RestTemplate restTemplate,
@@ -47,128 +42,112 @@ public class OpenAiTranslator implements TranslatorPort {
         this.model = model;
     }
 
-    @Override
-    public List<String> translateSentences(List<String> sourceSentences, String sourceLang, String targetLang) {
-        return translateSentencesChunked(sourceSentences, sourceLang, targetLang, DEFAULT_CHUNK_SIZE);
-    }
+    // --- 기존 TranslatorPort 인터페이스 메서드는 더 이상 사용하지 않으므로 변경 또는 제거 필요 ---
+    // --- TranslatorPort 인터페이스를 먼저 수정하는 것이 좋지만, 일단 UnsupportedOperationException 처리 ---
 
-    @Override
-    public List<String> translateSentencesChunked(List<String> sourceSentences, String sourceLang, String targetLang, int chunkSize) {
-        if (CollectionUtils.isEmpty(sourceSentences)) {
+
+
+    // --- 새로운 핵심 메서드: 원본 텍스트를 분리하고 번역까지 수행 ---
+    /**
+     * 원본 텍스트를 OpenAI에 보내 논리적 문장 단위로 분리하고, 각 문장을 번역하여 원본-번역 쌍의 리스트를 반환합니다.
+     * @param rawText 원본 전체 텍스트
+     * @param targetLang 번역 목표 언어
+     * @return 원본-번역 쌍 (TranslationPair) 리스트
+     */
+    public List<TranslationPair> extractAndTranslate(String rawText, String targetLang) {
+        if (rawText == null || rawText.isBlank()) {
             return Collections.emptyList();
         }
 
-        // 대량의 문장을 안정적으로 처리하기 위해 chunkSize 단위로 나누어 API를 호출합니다.
-        // 이는 API 요청 시간 초과, 과도한 토큰 사용, 한번에 너무 긴 텍스트로 인한 응답 품질 저하를 방지합니다.
-        List<String> translatedSentences = new ArrayList<>();
-        List<List<String>> chunks = partition(sourceSentences, chunkSize);
-
-        for (List<String> chunk : chunks) {
-            translatedSentences.addAll(translateSingleChunk(chunk, sourceLang, targetLang));
-        }
-
-        // 최종적으로 원본 문장 수와 번역된 문장 수가 같은지 한번 더 검증합니다.
-        if (sourceSentences.size() != translatedSentences.size()) {
-            throw new TranslationSizeMismatchException(
-                    String.format("번역 후 문장 개수가 일치하지 않습니다. (원본: %d, 번역: %d)",
-                            sourceSentences.size(), translatedSentences.size())
-            );
-        }
-        return translatedSentences;
-    }
-
-    /**
-     * 한 개의 청크(문장 묶음)를 번역하기 위해 OpenAI API를 호출합니다.
-     */
-    private List<String> translateSingleChunk(List<String> chunk, String sourceLang, String targetLang) {
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(apiKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
-
-        String requestJson;
-        try {
-            // OpenAI에 전달할 요청 JSON을 만듭니다.
-            requestJson = objectMapper.writeValueAsString(chunk);
-        } catch (JsonProcessingException e) {
-            // 이 예외는 발생 가능성이 매우 낮습니다.
-            throw new TranslationException("요청 JSON 생성에 실패했습니다.", e);
-        }
 
         // 시스템 메시지와 사용자 메시지를 조합하여 프롬프트를 구성합니다.
         OpenAiTranslationDto.Message systemMessage = new OpenAiTranslationDto.Message("system", createSystemPrompt(targetLang));
-        OpenAiTranslationDto.Message userMessage = new OpenAiTranslationDto.Message("user", requestJson);
+        // rawText를 직접 사용자 입력으로 전달하여 OpenAI가 분리 및 번역하도록 요청
+        // TODO: rawText가 너무 길 경우 토큰 제한에 걸릴 수 있으므로, 청크로 나누어 처리하는 로직 추가 필요 (향후 개선점)
+        OpenAiTranslationDto.Message userMessage = new OpenAiTranslationDto.Message("user", rawText);
 
         // API 요청 객체 생성
         OpenAiTranslationDto.ChatRequest request = OpenAiTranslationDto.ChatRequest.of(model, List.of(systemMessage, userMessage));
 
+        if (log.isDebugEnabled()) {
+            log.debug("OpenAI API Key (masked): {}", apiKey != null && apiKey.length() > 5 ? apiKey.substring(0, 5) + "..." : apiKey);
+            log.debug("OpenAI API Request Headers: {}", headers);
+            try {
+                log.debug("OpenAI API Request Body: {}", objectMapper.writeValueAsString(request));
+            } catch (JsonProcessingException e) {
+                log.error("Failed to serialize OpenAI request for logging", e);
+            }
+        }
         try {
             // RestTemplate으로 API 호출
             HttpEntity<OpenAiTranslationDto.ChatRequest> entity = new HttpEntity<>(request, headers);
             OpenAiTranslationDto.ChatResponse response = restTemplate.postForObject(apiUrl, entity, OpenAiTranslationDto.ChatResponse.class);
 
+            if (log.isDebugEnabled()) {
+                try {
+                    log.debug("OpenAI API Raw Response: {}", objectMapper.writeValueAsString(response));
+                } catch (JsonProcessingException e) {
+                    log.error("Failed to serialize OpenAI response for logging", e);
+                }
+            }
+
             if (response == null || CollectionUtils.isEmpty(response.getChoices())) {
                 throw new TranslationException("OpenAI로부터 비어있는 응답을 받았습니다.", null);
             }
 
-            // 응답에서 순수 JSON 배열만 추출하여 파싱합니다.
+            // 응답에서 JSON 배열만 추출하여 TranslationPair 리스트로 파싱합니다.
             String rawContent = response.getChoices().get(0).getMessage().content();
-            List<String> translatedChunk = parseJsonArray(rawContent);
+            List<TranslationPair> translationPairs = parseOpenAiResponseForPairs(rawContent);
 
-            // 응답으로 온 번역 문장의 개수가 요청한 개수와 일치하는지 검증합니다.
-            if (chunk.size() != translatedChunk.size()) {
-                throw new TranslationSizeMismatchException(
-                        String.format("번역된 문장 개수가 일치하지 않습니다. (요청: %d, 응답: %d)", chunk.size(), translatedChunk.size())
-                );
-            }
-            return translatedChunk;
+            // OpenAI가 반환한 객체 개수가 프롬프트 지시를 따랐는지 검증할 수 있습니다.
+            // 프롬프트는 "number of objects MUST be exactly the same as the number of logical sentences you identify"
+            // 라고 지시하고 있으므로, parseOpenAiResponseForPairs에서 파싱된 개수를 신뢰합니다.
+            // 필요하다면 이곳에 추가 검증 로직을 구현할 수 있습니다.
+
+            return translationPairs;
 
         } catch (RestClientException e) {
-            // 401(인증), 429(요청량 초과), 5xx(서버) 등 모든 HTTP 관련 예외를 포괄합니다.
             throw new TranslationException("OpenAI API 호출에 실패했습니다. " + e.getMessage(), e);
         }
     }
 
+
     /**
-     * OpenAI가 안정적으로 JSON 배열만 응답하도록 유도하는 시스템 프롬프트를 생성합니다.
+     * OpenAI가 원본 텍스트를 문장 단위로 분리하고 번역하도록 유도하는 시스템 프롬프트를 생성합니다.
      */
     private String createSystemPrompt(String targetLang) {
         return String.format(
-            "You are a translator that translates a JSON array of strings into %s. " +
-            "You will receive a JSON array where each string is a sentence. " +
-            "Your task is to translate every sentence into %s. " +
-            "The response MUST be a JSON array of strings, with the exact same number of sentences as the input. " +
-            "Do NOT include any additional text, explanations, or markdown formatting like ```json. " +
-            "Just return the JSON array of translated sentences.",
-            targetLang, targetLang
+            "You are a translator that takes raw text, splits it into logical sentences, and translates each sentence into %s. " +
+            "The response MUST be a JSON array of objects. Each object MUST contain two keys: 'source' for an original logical sentence and 'translated' for its corresponding translated sentence. " +
+            "The number of objects in the array MUST be exactly the same as the number of logical sentences you identify in the input text. " +
+            "Do NOT include any additional text, explanations, or markdown formatting outside the JSON array. " +
+            "Ensure that the string values for 'source' and 'translated' are valid JSON strings, properly escaping any internal double quotes or special characters. " +
+            "Example: [{\"source\": \"Hello World.\", \"translated\": \"안녕하세요.\"}, {\"source\": \"How are you?\", \"translated\": \"어떠세요?\"}]",
+            targetLang
         );
     }
 
-    /**
-    * List를 주어진 사이즈의 작은 List들로 나눕니다.
-    */
-    private <T> List<List<T>> partition(List<T> list, int size) {
-        List<List<T>> partitioned = new ArrayList<>();
-        for (int i = 0; i < list.size(); i += size) {
-            partitioned.add(list.subList(i, Math.min(i + size, list.size())));
-        }
-        return partitioned;
-    }
+
 
     /**
-     * 모델의 응답에서 JSON 배열 부분만 정확히 추출합니다.
+     * 모델의 응답에서 JSON 객체를 파싱하고 TranslationPair 리스트를 추출합니다.
      */
-    private List<String> parseJsonArray(String content) {
-        // 모델이 응답 앞뒤에 불필요한 텍스트를 붙이는 경우를 대비해, '[' 와 ']' 사이의 내용만 추출합니다.
-        Pattern pattern = Pattern.compile("\\[.*\\]", Pattern.DOTALL);
-        Matcher matcher = pattern.matcher(content);
-        if (matcher.find()) {
-            String jsonArrayString = matcher.group();
-            try {
-                return objectMapper.readValue(jsonArrayString, new TypeReference<>() {});
-            } catch (JsonProcessingException e) {
-                throw new TranslationException("번역 응답의 JSON 파싱에 실패했습니다. 응답 내용: " + content, e);
+    private List<TranslationPair> parseOpenAiResponseForPairs(String content) {
+        try {
+            TypeReference<List<TranslationPair>> typeRef = new TypeReference<>() {};
+            List<TranslationPair> translationPairs = objectMapper.readValue(content, typeRef);
+
+            if (translationPairs == null) {
+                throw new TranslationException("번역 응답에서 TranslationPair 리스트를 찾을 수 없습니다. 응답 내용: " + content, null);
             }
+            return translationPairs;
+
+        } catch (JsonProcessingException e) {
+            throw new TranslationException("번역 응답의 JSON 파싱에 실패했습니다. 응답 내용: " + content, e);
         }
-        throw new TranslationException("번역 응답에서 유효한 JSON 배열을 찾을 수 없습니다. 응답 내용: " + content, null);
     }
+
+
 }

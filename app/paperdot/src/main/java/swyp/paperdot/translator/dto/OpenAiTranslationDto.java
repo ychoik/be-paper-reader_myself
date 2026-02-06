@@ -14,11 +14,16 @@ public class OpenAiTranslationDto {
     public record ChatRequest(
             String model,
             List<Message> messages,
-            @JsonProperty("response_format") ResponseFormat responseFormat,
-            double temperature
+            @JsonProperty("response_format") ResponseFormat responseFormat
     ) {
+        // responseFormat을 명시적으로 지정하는 경우
+        public static ChatRequest of(String model, List<Message> messages, ResponseFormat responseFormat) {
+            return new ChatRequest(model, messages, responseFormat);
+        }
+
+        // responseFormat 없이 호출하는 경우 (기본값 null)
         public static ChatRequest of(String model, List<Message> messages) {
-            return new ChatRequest(model, messages, new ResponseFormat("json_object"), 0.3);
+            return new ChatRequest(model, messages, null); // responseFormat을 null로 설정
         }
     }
 
@@ -27,7 +32,7 @@ public class OpenAiTranslationDto {
             String role,
             String content
     ) {}
-    
+
     // JSON 응답 모드를 활성화하기 위한 객체
     public record ResponseFormat(
             String type
@@ -46,4 +51,7 @@ public class OpenAiTranslationDto {
     public static class Choice {
         private Message message;
     }
+
+    // 원본 문장과 번역된 문장 쌍을 위한 DTO
+    public record TranslationPair(String source, String translated) {}
 }

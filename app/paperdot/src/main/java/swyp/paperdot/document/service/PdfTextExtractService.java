@@ -1,6 +1,7 @@
 package swyp.paperdot.document.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.Loader; // Loader 클래스 import
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -11,11 +12,13 @@ import swyp.paperdot.document.exception.StorageDownloadException;
 
 import java.io.IOException;
 import java.io.InputStream;
+import lombok.extern.slf4j.Slf4j;
 // Files, Path, StandardCopyOption은 더 이상 필요 없으므로 제거 (혹시 이전 코드에 있었다면)
 
 /**
  * PDF 파일에서 텍스트를 추출하는 비즈니스 로직을 처리하는 서비스 클래스입니다.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PdfTextExtractService {
@@ -32,21 +35,20 @@ public class PdfTextExtractService {
      * @throws PdfParseException          PDF 처리 중 오류가 발생할 경우
      */
     public String extractText(Long documentId) {
-        // InputStream을 byte 배열로 읽어들인 후 Loader.loadPDF()에 전달하는 방식으로 처리합니다.
-        // 이 방식이 PDFBox 3.x에서 스트림을 처리하는 표준적인 방법 중 하나입니다.
-
+        log.info("documentId {} - PDF 텍스트 추출 시작", documentId);
         try (InputStream inputStream = documentDownloadService.downloadOriginalPdf(documentId)) {
-            try (PDDocument document = Loader.loadPDF(inputStream.readAllBytes())) { // Loader.loadPDF() 사용
+            log.info("documentId {} - PDF 파일 스트림 다운로드 완료.", documentId);
+            try (PDDocument document = Loader.loadPDF(inputStream.readAllBytes())) {
                 PDFTextStripper stripper = new PDFTextStripper();
                 String text = stripper.getText(document);
-
-                // OCR 확장 포인트 (이전과 동일)
-                // if (text.isBlank() || text.length() < SOME_THRESHOLD) { ... }
-
+                log.info("documentId {} - PDF 텍스트 추출 완료. 추출된 텍스트 길이: {}", documentId, text.length());
                 return text;
             }
+        } catch (DocumentNotFoundException | StorageDownloadException e) {
+            log.error("documentId {} - PDF 텍스트 추출 중 문서 또는 스토리지 오류 발생: {}", documentId, e.getMessage(), e);
+            throw e; // 호출자에게 예외 전파
         } catch (IOException e) {
-            // 파일 로드, 텍스트 추출 등 모든 I/O 관련 오류를 처리합니다.
+            log.error("documentId {} - PDF 텍스트 추출 중 I/O 또는 PDF 파싱 오류 발생: {}", documentId, e.getMessage(), e);
             throw new PdfParseException("Failed to process PDF file for documentId: " + documentId, e);
         }
     }
