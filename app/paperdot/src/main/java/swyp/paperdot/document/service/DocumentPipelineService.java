@@ -15,9 +15,8 @@ import swyp.paperdot.doc_units.translation.DocUnitTranslationRepository;
 import swyp.paperdot.translator.OpenAiTranslator;
 import swyp.paperdot.translator.dto.OpenAiTranslationDto.TranslationPair; // TranslationPair import
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -161,5 +160,42 @@ public class DocumentPipelineService {
         log.info("[Async Start] documentId {} 문서 파이프라인 비동기 처리 시작. Overwrite: {}", documentId, overwrite);
         processDocument(documentId, overwrite);
         log.info("[Async End] documentId {} 문서 파이프라인 비동기 처리 완료.", documentId);
+    }
+
+    /**
+     * 특정 문서에 대한 원문(DocUnit)과 번역문(DocUnitTranslation) 쌍을 1:1로 매칭하여 반환합니다.
+     *
+     * @param documentId 조회할 문서의 ID
+     * @return 원문-번역 쌍 DTO 리스트
+     */
+    @Transactional(readOnly = true)
+    public List<swyp.paperdot.document.dto.DocumentTranslationPairResponse> getTranslationPairsForDocument(Long documentId) {
+        // 1. documentId에 해당하는 모든 docUnitsEntity를 orderInDoc 순서대로 조회
+        List<docUnitsEntity> docUnits = docUnitsRepository.findByDocumentIdOrderByOrderInDocAsc(documentId);
+
+        if (CollectionUtils.isEmpty(docUnits)) {
+            log.warn("documentId {} 에 해당하는 DocUnit이 없습니다.", documentId);
+            return Collections.emptyList();
+        }
+
+        // 2. DocUnitTranslation에서 해당 documentId의 번역들을 조회하여 Map으로 구성
+        // (JPA의 ManyToOne 관계를 통해 DocUnit을 기준으로 번역을 가져올 수 있으나,
+        // 벌크로 가져와서 매핑하는 것이 N+1 쿼리 문제를 피할 수 있어 효율적일 수 있습니다.)
+        List<DocUnitTranslation> translations = docUnitTranslationRepository.findByDocUnitDocumentId(documentId);
+        // doc_units_translation 테이블에는 하나의 doc_unit_id에 대해 하나의 번역만 있다고 가정
+        java.util.Map<Long, String> translatedTextMap = translations.stream()
+                .collect(Collectors.toMap(
+                        dt -> dt.getDocUnit().getId(), // DocUnit ID를 키로 사용
+                        DocUnitTranslation::getTranslatedText
+                ));
+
+        // 3. docUnits와 translatedTextMap을 조합하여 DTO 리스트 생성
+        return docUnits.stream()
+                .map(docUnit -> swyp.paperdot.document.dto.DocumentTranslationPairResponse.builder()
+                        .docUnitId(docUnit.getId())
+                        .sourceText(docUnit.getSourceText())
+                        .translatedText(translatedTextMap.getOrDefault(docUnit.getId(), "")) // 번역이 없는 경우 빈 문자열 반환
+                        .build())
+                .collect(Collectors.toList());
     }
 }

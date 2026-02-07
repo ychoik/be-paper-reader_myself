@@ -40,4 +40,23 @@ public class DocumentPipelineController {
         // 작업이 시작되었음을 즉시 클라이언트에 알립니다.
         return ResponseEntity.accepted().body(Map.of("message", "Document processing initiated for documentId: " + documentId));
     }
+
+    @Operation(summary = "문서 번역 쌍 조회", description = "특정 문서의 원문-번역 문장 쌍을 1:1로 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "번역 쌍 조회 성공"),
+            @ApiResponse(responseCode = "404", description = "존재하지 않는 문서 ID일 경우 또는 번역 데이터가 없을 경우")
+    })
+    @GetMapping("/{documentId}/translation-pairs")
+    public ResponseEntity<java.util.List<swyp.paperdot.document.dto.DocumentTranslationPairResponse>> getTranslationPairs(
+            @Parameter(description = "번역 쌍을 조회할 문서의 ID", required = true) @PathVariable Long documentId
+    ) {
+        log.info("API 요청: documentId {} 번역 쌍 조회 요청 받음.", documentId);
+        java.util.List<swyp.paperdot.document.dto.DocumentTranslationPairResponse> translationPairs =
+                documentPipelineService.getTranslationPairsForDocument(documentId);
+
+        if (translationPairs.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(translationPairs);
+    }
 }
