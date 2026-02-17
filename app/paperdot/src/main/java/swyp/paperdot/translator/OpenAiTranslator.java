@@ -13,7 +13,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import swyp.paperdot.translator.dto.OpenAiTranslationDto;
-import swyp.paperdot.translator.dto.OpenAiTranslationDto.TranslationPair; // TranslationPair import
+import swyp.paperdot.translator.dto.OpenAiTranslationDto.TranslationPair;
 import swyp.paperdot.translator.exception.TranslationException;
 
 import java.util.Collections;
@@ -42,18 +42,6 @@ public class OpenAiTranslator implements TranslatorPort {
         this.model = model;
     }
 
-    // --- 기존 TranslatorPort 인터페이스 메서드는 더 이상 사용하지 않으므로 변경 또는 제거 필요 ---
-    // --- TranslatorPort 인터페이스를 먼저 수정하는 것이 좋지만, 일단 UnsupportedOperationException 처리 ---
-
-
-
-    // --- 새로운 핵심 메서드: 원본 텍스트를 분리하고 번역까지 수행 ---
-    /**
-     * 원본 텍스트를 OpenAI에 보내 논리적 문장 단위로 분리하고, 각 문장을 번역하여 원본-번역 쌍의 리스트를 반환합니다.
-     * @param rawText 원본 전체 텍스트
-     * @param targetLang 번역 목표 언어
-     * @return 원본-번역 쌍 (TranslationPair) 리스트
-     */
     public List<TranslationPair> extractAndTranslate(String rawText, String targetLang) {
         if (rawText == null || rawText.isBlank()) {
             return Collections.emptyList();
@@ -62,13 +50,9 @@ public class OpenAiTranslator implements TranslatorPort {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        // 시스템 메시지와 사용자 메시지를 조합하여 프롬프트를 구성합니다.
         OpenAiTranslationDto.Message systemMessage = new OpenAiTranslationDto.Message("system", createSystemPrompt(targetLang));
-        // rawText를 직접 사용자 입력으로 전달하여 OpenAI가 분리 및 번역하도록 요청
-        // TODO: rawText가 너무 길 경우 토큰 제한에 걸릴 수 있으므로, 청크로 나누어 처리하는 로직 추가 필요 (향후 개선점)
         OpenAiTranslationDto.Message userMessage = new OpenAiTranslationDto.Message("user", rawText);
 
-        // API 요청 객체 생성
         OpenAiTranslationDto.ChatRequest request = OpenAiTranslationDto.ChatRequest.of(model, List.of(systemMessage, userMessage));
 
         if (log.isDebugEnabled()) {
@@ -81,7 +65,6 @@ public class OpenAiTranslator implements TranslatorPort {
             }
         }
         try {
-            // RestTemplate으로 API 호출
             HttpEntity<OpenAiTranslationDto.ChatRequest> entity = new HttpEntity<>(request, headers);
             OpenAiTranslationDto.ChatResponse response = restTemplate.postForObject(apiUrl, entity, OpenAiTranslationDto.ChatResponse.class);
 
@@ -94,29 +77,53 @@ public class OpenAiTranslator implements TranslatorPort {
             }
 
             if (response == null || CollectionUtils.isEmpty(response.getChoices())) {
-                throw new TranslationException("OpenAI로부터 비어있는 응답을 받았습니다.", null);
+                throw new TranslationException("OpenAI returned an empty response.", null);
             }
 
-            // 응답에서 JSON 배열만 추출하여 TranslationPair 리스트로 파싱합니다.
             String rawContent = response.getChoices().get(0).getMessage().content();
-            List<TranslationPair> translationPairs = parseOpenAiResponseForPairs(rawContent);
-
-            // OpenAI가 반환한 객체 개수가 프롬프트 지시를 따랐는지 검증할 수 있습니다.
-            // 프롬프트는 "number of objects MUST be exactly the same as the number of logical sentences you identify"
-            // 라고 지시하고 있으므로, parseOpenAiResponseForPairs에서 파싱된 개수를 신뢰합니다.
-            // 필요하다면 이곳에 추가 검증 로직을 구현할 수 있습니다.
-
-            return translationPairs;
+            return parseOpenAiResponseForPairs(rawContent);
 
         } catch (RestClientException e) {
-            throw new TranslationException("OpenAI API 호출에 실패했습니다. " + e.getMessage(), e);
+            throw new TranslationException("OpenAI API call failed. " + e.getMessage(), e);
         }
     }
 
+    public List<String> translateSentences(List<String> sentences, String targetLang) {
+        if (sentences == null || sentences.isEmpty()) {
+            return Collections.emptyList();
+        }
 
-    /**
-     * OpenAI가 원본 텍스트를 문장 단위로 분리하고 번역하도록 유도하는 시스템 프롬프트를 생성합니다.
-     */
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        String userContent;
+        try {
+            userContent = objectMapper.writeValueAsString(sentences);
+        } catch (JsonProcessingException e) {
+            throw new TranslationException("Failed to serialize sentences to JSON.", e);
+        }
+
+        OpenAiTranslationDto.Message systemMessage = new OpenAiTranslationDto.Message("system", createTranslationOnlyPrompt(targetLang));
+        OpenAiTranslationDto.Message userMessage = new OpenAiTranslationDto.Message("user", userContent);
+
+        OpenAiTranslationDto.ChatRequest request = OpenAiTranslationDto.ChatRequest.of(model, List.of(systemMessage, userMessage));
+
+        try {
+            HttpEntity<OpenAiTranslationDto.ChatRequest> entity = new HttpEntity<>(request, headers);
+            OpenAiTranslationDto.ChatResponse response = restTemplate.postForObject(apiUrl, entity, OpenAiTranslationDto.ChatResponse.class);
+
+            if (response == null || CollectionUtils.isEmpty(response.getChoices())) {
+                throw new TranslationException("OpenAI returned an empty response.", null);
+            }
+
+            String rawContent = response.getChoices().get(0).getMessage().content();
+            return parseOpenAiResponseForStringList(rawContent);
+
+        } catch (RestClientException e) {
+            throw new TranslationException("OpenAI API call failed. " + e.getMessage(), e);
+        }
+    }
+
     private String createSystemPrompt(String targetLang) {
         return String.format(
             "You are a translator that takes raw text, splits it into logical sentences, and translates each sentence into %s. " +
@@ -129,25 +136,42 @@ public class OpenAiTranslator implements TranslatorPort {
         );
     }
 
+    private String createTranslationOnlyPrompt(String targetLang) {
+        return String.format(
+            "You are a translator. Translate each element of the input JSON array into %s. " +
+            "The response MUST be a JSON array of strings with the same length and order as the input. " +
+            "Do NOT include any additional text, explanations, or markdown formatting outside the JSON array.",
+            targetLang
+        );
+    }
 
-
-    /**
-     * 모델의 응답에서 JSON 객체를 파싱하고 TranslationPair 리스트를 추출합니다.
-     */
     private List<TranslationPair> parseOpenAiResponseForPairs(String content) {
         try {
             TypeReference<List<TranslationPair>> typeRef = new TypeReference<>() {};
             List<TranslationPair> translationPairs = objectMapper.readValue(content, typeRef);
 
             if (translationPairs == null) {
-                throw new TranslationException("번역 응답에서 TranslationPair 리스트를 찾을 수 없습니다. 응답 내용: " + content, null);
+                throw new TranslationException("Translation pairs missing. content=" + content, null);
             }
             return translationPairs;
 
         } catch (JsonProcessingException e) {
-            throw new TranslationException("번역 응답의 JSON 파싱에 실패했습니다. 응답 내용: " + content, e);
+            throw new TranslationException("Failed to parse translation response as JSON. content=" + content, e);
         }
     }
 
+    private List<String> parseOpenAiResponseForStringList(String content) {
+        try {
+            TypeReference<List<String>> typeRef = new TypeReference<>() {};
+            List<String> translated = objectMapper.readValue(content, typeRef);
 
+            if (translated == null) {
+                throw new TranslationException("Translated list missing. content=" + content, null);
+            }
+            return translated;
+
+        } catch (JsonProcessingException e) {
+            throw new TranslationException("Failed to parse translation response as JSON array of strings. content=" + content, e);
+        }
+    }
 }
