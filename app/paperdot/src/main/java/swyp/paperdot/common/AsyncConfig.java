@@ -1,4 +1,4 @@
-﻿package swyp.paperdot.common;
+package swyp.paperdot.common;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
