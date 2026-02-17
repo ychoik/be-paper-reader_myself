@@ -1,4 +1,4 @@
-package swyp.paperdot.document.service;
+﻿package swyp.paperdot.document.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +30,6 @@ public class DocumentPipelineService {
     private final docUnitsRepository docUnitsRepository;
     private final OpenAiTranslator openAiTranslator;
     private final DocUnitTranslationRepository docUnitTranslationRepository;
-    private final DocumentSseService documentSseService;
 
     private static final String DEFAULT_SOURCE_LANG = "en";
     private static final String DEFAULT_TARGET_LANG = "ko";
@@ -53,14 +52,11 @@ public class DocumentPipelineService {
 
             // Step 3: Pre-save doc_units and translate in batches
             log.info("[Step 3/3] documentId {} - pre-save doc_units and batch translation start. Overwrite={}", documentId, overwrite);
-            documentSseService.sendState(documentId, "STARTED", "translation pipeline started");
             processTranslationInBatches(documentId, sentences, DEFAULT_TARGET_LANG, overwrite, batchSize);
-            documentSseService.sendState(documentId, "COMPLETED", "translation pipeline completed");
             log.info("[Step 3/3] documentId {} - pre-save doc_units and batch translation done", documentId);
 
         } catch (Exception e) {
             log.error("===== Document Pipeline FAILED for documentId: {} =====", documentId, e);
-            documentSseService.sendState(documentId, "FAILED", "translation pipeline failed: " + e.getMessage());
         } finally {
             log.info("===== Document Pipeline END for documentId: {} =====", documentId);
         }
@@ -152,7 +148,6 @@ public class DocumentPipelineService {
     ) {
         if (CollectionUtils.isEmpty(sentences)) {
             log.warn("documentId {} - no sentences after split. abort.", documentId);
-            documentSseService.sendState(documentId, "NO_CONTENT", "no sentences after split");
             return;
         }
 
@@ -184,7 +179,6 @@ public class DocumentPipelineService {
         int total = newDocUnits.size();
         int start = 0;
         int batchIndex = 0;
-        int translatedCount = 0;
         while (start < total) {
             int end = Math.min(start + batchSize, total);
             List<docUnitsEntity> batchUnits = newDocUnits.subList(start, end);
@@ -212,8 +206,6 @@ public class DocumentPipelineService {
 
                 docUnitTranslationRepository.saveAll(newTranslations);
                 docUnitsRepository.saveAll(batchUnits);
-                translatedCount += batchUnits.size();
-                documentSseService.sendProgress(documentId, translatedCount, total);
                 log.info("documentId {} - batch {} saved ({}/{})", documentId, batchIndex, end, total);
 
             } catch (Exception e) {
@@ -222,7 +214,6 @@ public class DocumentPipelineService {
                     docUnit.updateStatus(UnitStatus.FAILED);
                 }
                 docUnitsRepository.saveAll(batchUnits);
-                documentSseService.sendBatchFailed(documentId, start, end, e.getMessage());
             }
 
             start = end;
@@ -260,5 +251,22 @@ public class DocumentPipelineService {
                         .translatedText(translatedTextMap.getOrDefault(docUnit.getId(), ""))
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public swyp.paperdot.document.dto.DocumentTranslationProgressResponse getTranslationProgress(Long documentId) {
+        long total = docUnitsRepository.countByDocumentId(documentId);
+        long translated = docUnitsRepository.countByDocumentIdAndStatus(documentId, UnitStatus.TRANSLATED);
+        long translating = docUnitsRepository.countByDocumentIdAndStatus(documentId, UnitStatus.TRANSLATING);
+        long created = docUnitsRepository.countByDocumentIdAndStatus(documentId, UnitStatus.CREATED);
+        long failed = docUnitsRepository.countByDocumentIdAndStatus(documentId, UnitStatus.FAILED);
+
+        return swyp.paperdot.document.dto.DocumentTranslationProgressResponse.builder()
+                .total(total)
+                .translated(translated)
+                .translating(translating)
+                .created(created)
+                .failed(failed)
+                .build();
     }
 }

@@ -1,4 +1,4 @@
-package swyp.paperdot.document.controller;
+﻿package swyp.paperdot.document.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -9,10 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.http.MediaType;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import swyp.paperdot.document.service.DocumentPipelineService;
-import swyp.paperdot.document.service.DocumentSseService;
 
 import java.util.Map;
 
@@ -24,13 +21,12 @@ import java.util.Map;
 public class DocumentPipelineController {
 
     private final DocumentPipelineService documentPipelineService;
-    private final DocumentSseService documentSseService;
 
-    @Operation(summary = "문서 처리 파이프라인 실행", description = "특정 문서 ID에 대해 텍스트 추출, 번역, 저장까지의 전체 파이프라인을 비동기적으로 실행합니다.")
+    @Operation(summary = "문서 처리 파이프라인 실행", description = "특정 문서 ID에 대해 텍스트 추출, 번역, 저장 파이프라인을 비동기로 실행합니다.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "202", description = "파이프라인 처리가 성공적으로 시작됨"),
-            @ApiResponse(responseCode = "404", description = "존재하지 않는 문서 ID일 경우"),
-            @ApiResponse(responseCode = "500", description = "파이프라인 실행 중 서버 내부 오류 발생")
+            @ApiResponse(responseCode = "202", description = "파이프라인 처리 시작"),
+            @ApiResponse(responseCode = "404", description = "문서 ID가 존재하지 않음"),
+            @ApiResponse(responseCode = "500", description = "파이프라인 실행 중 서버 오류")
     })
     @PostMapping("/{documentId}/process")
     public ResponseEntity<Map<String, String>> processDocument(
@@ -39,28 +35,18 @@ public class DocumentPipelineController {
             @RequestParam(defaultValue = "false") boolean overwrite
     ) {
         log.info("API 요청: documentId {} 문서를 처리 요청 받음. Overwrite: {}", documentId, overwrite);
-        // 파이프라인 서비스를 비동기적으로 호출합니다.
         documentPipelineService.processDocumentAsync(documentId, overwrite);
-        // 작업이 시작되었음을 즉시 클라이언트에 알립니다.
         return ResponseEntity.accepted().body(Map.of("message", "Document processing initiated for documentId: " + documentId));
-    }
-
-    @GetMapping(value = "/{documentId}/translation-events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter subscribeTranslationEvents(
-            @Parameter(description = "이벤트를 구독할 문서 ID", required = true) @PathVariable Long documentId
-    ) {
-        log.info("SSE 구독 요청: documentId {}", documentId);
-        return documentSseService.subscribe(documentId);
     }
 
     @Operation(summary = "문서 번역 쌍 조회", description = "특정 문서의 원문-번역 문장 쌍을 1:1로 조회합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "번역 쌍 조회 성공"),
-            @ApiResponse(responseCode = "404", description = "존재하지 않는 문서 ID일 경우 또는 번역 데이터가 없을 경우")
+            @ApiResponse(responseCode = "404", description = "문서 ID가 없거나 번역 데이터가 없음")
     })
     @GetMapping("/{documentId}/translation-pairs")
     public ResponseEntity<java.util.List<swyp.paperdot.document.dto.DocumentTranslationPairResponse>> getTranslationPairs(
-            @Parameter(description = "번역 쌍을 조회할 문서의 ID", required = true) @PathVariable Long documentId
+            @Parameter(description = "번역 쌍을 조회할 문서 ID", required = true) @PathVariable Long documentId
     ) {
         log.info("API 요청: documentId {} 번역 쌍 조회 요청 받음.", documentId);
         java.util.List<swyp.paperdot.document.dto.DocumentTranslationPairResponse> translationPairs =
@@ -70,5 +56,13 @@ public class DocumentPipelineController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(translationPairs);
+    }
+
+    @Operation(summary = "번역 진행률 조회", description = "문서 번역 진행률(상태별 개수)을 조회합니다.")
+    @GetMapping("/{documentId}/translation-progress")
+    public ResponseEntity<swyp.paperdot.document.dto.DocumentTranslationProgressResponse> getTranslationProgress(
+            @Parameter(description = "진행률을 조회할 문서 ID", required = true) @PathVariable Long documentId
+    ) {
+        return ResponseEntity.ok(documentPipelineService.getTranslationProgress(documentId));
     }
 }

@@ -44,4 +44,8 @@ public interface docUnitsRepository extends JpaRepository<docUnitsEntity, Long> 
      * @return 조회된 DocUnit 리스트
      */
     List<docUnitsEntity> findByDocumentIdAndStatusOrderByOrderInDocAsc(Long documentId, swyp.paperdot.doc_units.enums.UnitStatus status);
+
+    long countByDocumentId(Long documentId);
+
+    long countByDocumentIdAndStatus(Long documentId, swyp.paperdot.doc_units.enums.UnitStatus status);
 }
