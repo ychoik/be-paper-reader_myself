@@ -38,7 +38,14 @@ openai.api.system-message: '당신은 문서 요약을 전문으로 하는 유�
 ncp:
   storage:
     region: ${NCP_REGION}
-    endpoint: ${NCP_ENDPOINT}
+    endpoint: https://kr.object.ncloudstorage.com
     accessKey: ${NCP_ACCESS_KEY}
     secretKey: ${NCP_SECRET_KEY}
     bucket: ${NCP_BUCKET}
+
+translation:
+  batch-size: 30
+  executor:
+    core-pool-size: 4
+    max-pool-size: 8
+    queue-capacity: 200
