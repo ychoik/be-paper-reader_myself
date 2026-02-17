@@ -9,7 +9,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.MediaType;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import swyp.paperdot.document.service.DocumentPipelineService;
+import swyp.paperdot.document.service.DocumentSseService;
 
 import java.util.Map;
 
@@ -21,6 +24,7 @@ import java.util.Map;
 public class DocumentPipelineController {
 
     private final DocumentPipelineService documentPipelineService;
+    private final DocumentSseService documentSseService;
 
     @Operation(summary = "문서 처리 파이프라인 실행", description = "특정 문서 ID에 대해 텍스트 추출, 번역, 저장까지의 전체 파이프라인을 비동기적으로 실행합니다.")
     @ApiResponses(value = {
@@ -39,6 +43,14 @@ public class DocumentPipelineController {
         documentPipelineService.processDocumentAsync(documentId, overwrite);
         // 작업이 시작되었음을 즉시 클라이언트에 알립니다.
         return ResponseEntity.accepted().body(Map.of("message", "Document processing initiated for documentId: " + documentId));
+    }
+
+    @GetMapping(value = "/{documentId}/translation-events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter subscribeTranslationEvents(
+            @Parameter(description = "이벤트를 구독할 문서 ID", required = true) @PathVariable Long documentId
+    ) {
+        log.info("SSE 구독 요청: documentId {}", documentId);
+        return documentSseService.subscribe(documentId);
     }
 
     @Operation(summary = "문서 번역 쌍 조회", description = "특정 문서의 원문-번역 문장 쌍을 1:1로 조회합니다.")
