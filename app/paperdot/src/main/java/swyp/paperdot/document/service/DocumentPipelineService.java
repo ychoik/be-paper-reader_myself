@@ -1,4 +1,4 @@
-﻿package swyp.paperdot.document.service;
+package swyp.paperdot.document.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
