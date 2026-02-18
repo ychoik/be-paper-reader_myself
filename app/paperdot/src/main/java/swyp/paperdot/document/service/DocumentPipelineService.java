@@ -120,20 +120,48 @@ public class DocumentPipelineService {
         }
 
         String normalized = rawText.replace("\r\n", "\n").replace("\r", "\n");
-        List<String> sentences = new ArrayList<>();
 
-        for (String line : normalized.split("\n")) {
-            String trimmed = line.trim();
-            if (trimmed.isEmpty()) {
+        // Merge hard line breaks inside paragraphs to avoid splitting mid-sentence.
+        StringBuilder merged = new StringBuilder(normalized.length());
+        String[] lines = normalized.split("\n");
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i].trim();
+            if (line.isEmpty()) {
                 continue;
             }
-            // Simple sentence split for English text.
-            String[] parts = trimmed.split("(?<=[.!?])\\s+");
-            for (String part : parts) {
-                String s = part.trim();
-                if (!s.isEmpty()) {
-                    sentences.add(s);
+
+            // Handle hyphenated line breaks: "exam-" + "ple" -> "example"
+            if (line.endsWith("-") && i + 1 < lines.length) {
+                String next = lines[i + 1].trim();
+                if (!next.isEmpty()) {
+                    merged.append(line, 0, line.length() - 1);
+                    continue;
                 }
+            }
+
+            merged.append(line);
+
+            // If line does not look like a sentence end, join with space.
+            char last = line.charAt(line.length() - 1);
+            if (last == '.' || last == '!' || last == '?' || last == '"' || last == '\'' || last == ')') {
+                merged.append(' ');
+            } else {
+                merged.append(' ');
+            }
+        }
+
+        String mergedText = merged.toString().replaceAll("\\s+", " ").trim();
+        if (mergedText.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Simple sentence split for English text.
+        List<String> sentences = new ArrayList<>();
+        String[] parts = mergedText.split("(?<=[.!?])\\s+");
+        for (String part : parts) {
+            String s = part.trim();
+            if (!s.isEmpty()) {
+                sentences.add(s);
             }
         }
         return sentences;
