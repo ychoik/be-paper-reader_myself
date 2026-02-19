@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import swyp.paperdot.document.service.DocumentHistoryService;
 import swyp.paperdot.document.service.DocumentPipelineService;
 
 import java.util.Map;
@@ -21,6 +22,7 @@ import java.util.Map;
 public class DocumentPipelineController {
 
     private final DocumentPipelineService documentPipelineService;
+    private final DocumentHistoryService documentHistoryService;
 
     @Operation(summary = "문서 처리 파이프라인 실행", description = "특정 문서 ID에 대해 텍스트 추출, 번역, 저장 파이프라인을 비동기로 실행합니다.")
     @ApiResponses(value = {
@@ -64,5 +66,17 @@ public class DocumentPipelineController {
             @Parameter(description = "진행률을 조회할 문서 ID", required = true) @PathVariable Long documentId
     ) {
         return ResponseEntity.ok(documentPipelineService.getTranslationProgress(documentId));
+    }
+
+    @Operation(summary = "번역 기록 목록 조회", description = "특정 사용자(ownerId)의 번역 완료 문서 목록을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "번역 기록 목록 조회 성공"),
+            @ApiResponse(responseCode = "400", description = "ownerId 누락")
+    })
+    @GetMapping("/translation-histories")
+    public ResponseEntity<java.util.List<swyp.paperdot.document.dto.DocumentTranslationHistoryItemResponse>> getTranslationHistories(
+            @Parameter(description = "문서 소유자 ID", required = true) @RequestParam Long ownerId
+    ) {
+        return ResponseEntity.ok(documentHistoryService.getTranslationHistory(ownerId));
     }
 }
