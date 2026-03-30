@@ -1,183 +1,118 @@
 # be-paper-reader
 
-## 🔀 Pull Request 작성 가이드
+# 📘 Paperdot
+### 영어 원문과 번역문을 문장 단위로 정렬해주는 학습용 문서 리더 서비스
 
-이 레포지토리는 **자동 배포(CI/CD)** 및 **팀 협업**을 전제로 운영됩니다.  
-아래 가이드를 참고하여 PR을 작성해주세요.
-
-### 📍 기본 원칙
-- 모든 변경 사항은 **PR을 통해서만 main 브랜치에 병합**합니다.
-- 직접 main 브랜치에 push 하지 않습니다.
-- 기능 개발, 리팩토링, 인프라 변경 모두 PR 대상입니다.
+> 영어 PDF를 읽을 때  
+> 원문과 번역을 자연스럽게 문장별로 연결해서 볼 수 없을까?  
+> → 문서 파싱 + 문장 분리 + 번역 파이프라인으로 해결한 프로젝트
 
 ---
 
-### 🌱 브랜치 전략
-- `main`  
-  - 배포용 브랜치 (merge 시 자동 배포)
-- `feature/*`  
-  - 기능 개발 브랜치  
-  - 예: `feature/login-api`, `feature/docker-setup`
-- `fix/*`  
-  - 버그 수정 브랜치
-- `chore/*`  
-  - 설정, 문서, 인프라 작업
+## 📌 프로젝트 개요
+
+Paperdot은 영어 PDF 문서를 업로드하면  
+원문을 문장 단위로 분리하고, 번역문과 정렬하여  
+사용자가 **원문과 번역을 1:1로 대응해 읽을 수 있도록 돕는 서비스**입니다.
+
+기존의 단순 번역기는 문서 전체 맥락을 유지하기 어렵고,  
+PDF 특유의 복잡한 레이아웃 때문에 텍스트 추출이 불안정한 문제가 있습니다.
+
+이를 해결하기 위해  
+**PDF 파싱 + 문장 단위 분할 + 번역 정렬 + 사용자 문서 상태 저장** 구조로 서비스를 설계했습니다.
 
 ---
 
-### 📝 PR 작성 방법
-1. 작업 브랜치에서 커밋 후 원격 저장소에 push
-2. GitHub에서 PR 생성
-3. 자동으로 적용되는 **PR 템플릿**을 기준으로 내용 작성
-4. 리뷰 요청 후 승인되면 main 브랜치로 merge
+## 🧩 시스템 아키텍처
+
+<!-- 아키텍처 이미지 추가 예정 -->
+![Paperdot Architecture](./assets/architecture-paperdot.png)
+
+- 사용자가 영어 PDF 업로드
+- 서버가 PDF 텍스트를 추출하고 문장 단위로 분리
+- 번역 파이프라인이 각 문장을 번역
+- 원문/번역문을 정렬하여 저장
+- 사용자는 마지막으로 읽던 위치부터 이어서 학습 가능
 
 ---
 
-### 🔗 이슈 연동
-- PR에서 이슈를 함께 종료하려면 다음 키워드를 사용합니다.
-  ```text
-  close #이슈번호
-  resolves #이슈번호
+## 🚀 개발 배경
+
+- 영어 PDF는 문장별로 끊어 읽기 어려움
+- 번역문과 원문이 자연스럽게 매칭되지 않음
+- 논문, 다단 레이아웃 등은 일반적인 PDF 추출만으로 처리하기 어려움
+- 학습 중 읽던 위치나 상태를 유지하기 어려움
+
+➡️ 해결  
+-> 문서 구조를 세분화해서  
+**원문 추출 → 문장 분리 → 번역 → 상태 저장** 흐름으로 설계
 
 ---
 
-## 🧾 커밋 컨벤션
+## 💡 핵심 아이디어
 
-이 프로젝트는 **의미 단위 커밋**을 지향합니다.
-
-커밋 메시지는 아래 규칙을 따릅니다.
-
-### 📌 기본 형식
-
-```
-<type>:<summary>
-```
-
-### 📂 Type 목록
-
-| Type | 설명 |
-| --- | --- |
-| feat | 새로운 기능 추가 |
-| fix | 버그 수정 |
-| refactor | 리팩토링 (기능 변화 없음) |
-| chore | 설정, 빌드, 인프라, 패키지 작업 |
-| docs | 문서 추가/수정 |
-| test | 테스트 코드 추가/수정 |
-| style | 코드 스타일 변경 (포맷, 세미콜론 등) |
-
-### ✅ 예시
-
-```
-feat:add document upload API
-fix: resolve docker compose portconflict
-chore:add github actions cd pipeline
-docs:add backend setup guide
-```
+- PDF 문서를 문장 단위(`doc_unit`)로 분리
+- 각 문장에 대해 번역을 생성하고 정렬
+- 사용자가 문서를 읽던 위치와 설정을 별도로 저장
+- 문서 단위가 아니라 **학습 가능한 최소 단위** 중심으로 설계
 
 ---
 
-## 🌿 브랜치 네이밍 규칙
+## ⚙️ 주요 기능
 
-모든 작업은 **브랜치 단위로 진행**합니다.
+### 1. PDF 문서 업로드 및 텍스트 추출
+- PDF 문서를 업로드하여 원문 텍스트 추출
+- 복잡한 영어 문서 레이아웃 처리 기반 마련
 
-### 📌 브랜치 구조
+### 2. 문장 단위 문서 분할
+- 추출한 텍스트를 문장 단위로 분리
+- 학습과 번역 정렬에 적합한 구조로 저장
 
-| 브랜치 | 용도 |
-| --- | --- |
-| main | 배포 브랜치 (자동 배포 트리거) |
-| feature/* | 기능 개발 |
-| fix/* | 버그 수정 |
-| chore/* | 설정, 문서, 인프라 작업 |
+### 3. 번역 파이프라인
+- 문장 단위 번역 수행
+- 원문과 번역문을 1:1 구조로 정렬
 
-### 📌 예시
+### 4. 사용자 문서 상태 저장
+- 마지막으로 읽은 위치 저장
+- 사용자별 문서 열람 상태 관리
 
-```
-feature/login-api
-feature/document-parser
-fix/docker-port-issue
-chore/init-compose-structure
-docs/update-readme
-```
-
-⚠️ `main` 브랜치에 직접 push 하지 않습니다.
+### 5. 로그인 및 인증
+- OAuth2 로그인 지원
+- JWT 기반 인증 처리
 
 ---
 
-## 🖥️ 로컬 실행 방법 (Backend)
+## 🛠 기술 스택
 
-이 프로젝트는 **Docker 기반 실행**을 기본으로 합니다.
+### Backend
+- Java 17
+- Spring Boot
+- Spring Web / Spring MVC
+- Spring Data JPA
+- Spring Security
+- OAuth2 Client
 
-### 1️⃣ 필수 요구사항
+### Database
+- PostgreSQL
 
-- Docker
-- Docker Compose
+### Document Processing
+- Apache PDFBox
 
----
+### Storage / Infra
+- AWS SDK S3
+- Docker / Docker Compose
 
-### 2️⃣ 환경 변수 설정
-
-```bash
-cp .env.example .env
-```
-
-필요한 값은 `.env` 파일에 직접 입력합니다.
-
-⚠️ `.env` 파일은 Git에 커밋하지 않습니다.
-
----
-
-### 3️⃣ 로컬 실행
-
-```bash
-docker compose -f compose/docker-compose.local.yml up -d
-```
-
-실행 후 컨테이너 상태 확인:
-
-```bash
-docker ps
-
-```
+### API / Docs
+- JWT
+- Springdoc OpenAPI (Swagger)
 
 ---
 
-### 4️⃣ 서비스 접근
+🔥 트러블 슈팅
+문서 전체를 한 번에 처리하는 구조는 번역 비용과 응답 지연이 큼
+-> 문장 단위 처리 중심으로 구조를 분리
+일반 PDF 추출 방식만으로는 복잡한 영어 문서 레이아웃 대응이 어려움
+-> 문서 구조에 맞춘 추출/후처리 방향으로 개선
+사용자마다 읽던 위치와 설정이 달라 학습 경험이 끊김
+-> 사용자 문서 상태 저장 구조 분리
 
-```
-http://localhost:8080
-```
-
-(포트는 `docker-compose.local.yml` 기준)
-
----
-
-### 5️⃣ 종료
-
-```bash
-docker compose -f compose/docker-compose.local.yml down
-```
-
----
-
-## 📁 Backend 코드 위치 안내
-
-Spring Boot 백엔드 코드는 아래 경로에 생성합니다.
-
-```
-app/
- └─(SpringBootProjectRoot)
-```
-
-- `app/` 디렉토리 내부에 Spring Boot 프로젝트 생성
-- Docker 및 CI/CD는 이미 구성되어 있으므로
-    
-    **프로젝트 코드만 추가하면 됩니다**
-    
-
----
-
-## 🚀 배포 주의사항
-
-- `main` 브랜치에 merge 시 자동 배포됩니다.
-- 테스트가 완료된 코드만 PR → merge 해주세요.
-- 배포 환경 설정은 `compose/docker-compose.yml` 기준입니다.
