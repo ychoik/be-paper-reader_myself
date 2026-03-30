@@ -22,10 +22,11 @@ PDF 특유의 복잡한 레이아웃 때문에 텍스트 추출이 불안정한 
 **PDF 파싱 + 문장 단위 분할 + 번역 정렬 + 사용자 문서 상태 저장** 구조로 서비스를 설계했습니다.
 
 ---
-
 ## 🧩 시스템 아키텍처
 
-![Paperdot Architecture](image/페이퍼닷 아키텍쳐.png)
+<p align="center">
+  <img src="image/페이퍼닷 아키텍쳐.png" alt="Paperdot Architecture" width="900"/>
+</p>
 
 - 사용자가 영어 PDF 업로드
 - 서버가 PDF 텍스트를 추출하고 문장 단위로 분리
