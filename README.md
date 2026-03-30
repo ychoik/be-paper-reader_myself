@@ -25,14 +25,12 @@ PDF 특유의 복잡한 레이아웃 때문에 텍스트 추출이 불안정한 
 
 ## 🧩 시스템 아키텍처
 
-<!-- 아키텍처 이미지 추가 예정 -->
-![Paperdot Architecture](./assets/architecture-paperdot.png)
+![Paperdot Architecture](image/페이퍼닷 아키텍쳐.png)
 
 - 사용자가 영어 PDF 업로드
 - 서버가 PDF 텍스트를 추출하고 문장 단위로 분리
 - 번역 파이프라인이 각 문장을 번역
 - 원문/번역문을 정렬하여 저장
-- 사용자는 마지막으로 읽던 위치부터 이어서 학습 가능
 
 ---
 
@@ -72,47 +70,28 @@ PDF 특유의 복잡한 레이아웃 때문에 텍스트 추출이 불안정한 
 - 문장 단위 번역 수행
 - 원문과 번역문을 1:1 구조로 정렬
 
+<!--
 ### 4. 사용자 문서 상태 저장
 - 마지막으로 읽은 위치 저장
 - 사용자별 문서 열람 상태 관리
-
-### 5. 로그인 및 인증
+-->
+### 4. 로그인 및 인증
 - OAuth2 로그인 지원
 - JWT 기반 인증 처리
 
 ---
 
-## 🛠 기술 스택
-
-### Backend
-- Java 17
-- Spring Boot
-- Spring Web / Spring MVC
-- Spring Data JPA
-- Spring Security
-- OAuth2 Client
-
-### Database
-- PostgreSQL
-
-### Document Processing
-- Apache PDFBox
-
-### Storage / Infra
-- AWS SDK S3
-- Docker / Docker Compose
-
-### API / Docs
-- JWT
-- Springdoc OpenAPI (Swagger)
-
----
 
 🔥 트러블 슈팅
-문서 전체를 한 번에 처리하는 구조는 번역 비용과 응답 지연이 큼
+
+문서 전체를 한 번에 처리하는 구조는 번역 비용과 응답 지연이 큼 
 -> 문장 단위 처리 중심으로 구조를 분리
+
 일반 PDF 추출 방식만으로는 복잡한 영어 문서 레이아웃 대응이 어려움
 -> 문서 구조에 맞춘 추출/후처리 방향으로 개선
+
+<!--
 사용자마다 읽던 위치와 설정이 달라 학습 경험이 끊김
 -> 사용자 문서 상태 저장 구조 분리
+-->
 
